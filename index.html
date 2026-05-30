@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Фонтан</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,sans-serif;background:#000;color:#fff;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:linear-gradient(to bottom,rgba(0,0,10,.45) 0%,rgba(10,0,30,.25) 50%,rgba(0,0,15,.55) 100%);z-index:-1}
+nav{position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,.96);border-top:1px solid rgba(0,212,255,.22);display:flex;z-index:100;padding:6px}
+.nb{flex:1;padding:10px 4px;background:none;border:none;color:rgba(0,212,255,.4);font-size:10px;font-weight:700;cursor:pointer;border-radius:8px;transition:.2s}
+.nb.active{color:#00d4ff;background:rgba(0,212,255,.11)}
+.page{display:none;padding:14px 12px 86px}
+.page.active{display:block}
+.hero{text-align:center;padding:64px 20px 36px}
+.hero h1{font-size:50px;font-weight:900;background:linear-gradient(135deg,#00d4ff,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 18px rgba(0,212,255,.4))}
+.hero p{opacity:.4;font-size:12px;color:#00d4ff;margin-top:5px}
+.start-wrap{display:flex;flex-direction:column;align-items:center;gap:22px;padding:8px}
+.btn-start{width:156px;height:156px;border-radius:50%;border:3px solid #00d4ff;background:radial-gradient(circle,rgba(0,212,255,.11),transparent 70%);color:#00d4ff;font-size:21px;font-weight:900;cursor:pointer;box-shadow:0 0 34px rgba(0,212,255,.32);opacity:.28;pointer-events:none;transition:.3s}
+.btn-start.ready{opacity:1;pointer-events:all;animation:glow 2s infinite}
+.btn-start.running{border-color:#ff0080;color:#ff0080;background:radial-gradient(circle,rgba(255,0,128,.11),transparent 70%);box-shadow:0 0 34px rgba(255,0,128,.32);animation:none}
+@keyframes glow{0%,100%{box-shadow:0 0 34px rgba(0,212,255,.32)}50%{box-shadow:0 0 58px rgba(0,212,255,.75)}}
+.hint{background:rgba(0,212,255,.06);border-radius:11px;padding:11px 15px;font-size:11px;text-align:center;border:1px solid rgba(0,212,255,.18);max-width:320px}
+#show-status{font-size:12px;font-weight:800;opacity:.45;color:#00d4ff}
+.card{background:rgba(0,16,34,.82);backdrop-filter:blur(14px);border-radius:16px;padding:14px;margin-bottom:11px;border:1px solid rgba(0,212,255,.16)}
+.ctitle{font-size:9px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#00d4ff;opacity:.55;margin-bottom:11px}
+.upload-zone{border:2px dashed rgba(0,212,255,.25);border-radius:11px;padding:22px;text-align:center;cursor:pointer;position:relative;background:rgba(0,212,255,.03)}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.track-item{background:rgba(0,212,255,.04);border-radius:10px;margin-top:8px;border:1px solid rgba(0,212,255,.11)}
+.ti-head{display:flex;align-items:center;gap:9px;padding:10px 12px}
+.ti-name{flex:1;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ti-btns{display:flex;gap:6px;padding:0 12px 10px;flex-wrap:wrap}
+.badge{font-size:10px;padding:3px 8px;border-radius:9px;background:rgba(16,185,129,.16);color:#10b981;font-weight:900;border:1px solid rgba(16,185,129,.25);white-space:nowrap;flex-shrink:0}
+.badge-no{background:rgba(100,116,139,.11);color:#94a3b8;border-color:rgba(100,116,139,.22)}
+.btn{padding:7px 12px;border-radius:8px;border:none;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap}
+.btn:active{opacity:.52}
+.btn-red{background:rgba(255,0,128,.16);color:#ff6eb4;border:1px solid rgba(255,0,128,.25)}
+.btn-purple{background:rgba(139,92,246,.16);color:#a78bfa;border:1px solid rgba(139,92,246,.25)}
+.btn-cyan{background:rgba(0,212,255,.11);color:#00d4ff;border:1px solid rgba(0,212,255,.25)}
+.btn-green{background:rgba(16,185,129,.11);color:#10b981;border:1px solid rgba(16,185,129,.25)}
+.btn-orange{background:rgba(251,146,60,.11);color:#fb923c;border:1px solid rgba(251,146,60,.25)}
+.btn-yellow{background:rgba(234,179,8,.11);color:#eab308;border:1px solid rgba(234,179,8,.25)}
+
+/* OVERLAYS */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.97);z-index:300;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:16px}
+.overlay.open{display:flex}
+.import-box{width:100%;max-width:480px;background:rgba(0,10,26,.98);border:2px solid rgba(0,212,255,.28);border-radius:14px;padding:14px}
+.import-ta{width:100%;height:140px;background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.2);border-radius:8px;color:#fff;font-size:11px;padding:8px;font-family:monospace;resize:none;outline:none}
+.import-ta:focus{border-color:#00d4ff}
+.upload-pct{font-size:48px;font-weight:900;color:#00d4ff}
+.upload-bar{width:76%;max-width:320px;height:6px;background:rgba(0,212,255,.1);border-radius:3px;overflow:hidden}
+.upload-fill{height:100%;background:linear-gradient(90deg,#00d4ff,#06b6d4);width:0%}
+
+/* COUNTDOWN OVERLAY */
+.countdown-num{font-size:120px;font-weight:900;color:#ff6eb4;text-shadow:0 0 40px rgba(255,0,128,.5);line-height:1}
+.countdown-label{font-size:16px;font-weight:800;color:#ff6eb4;opacity:.6;text-transform:uppercase;letter-spacing:3px}
+
+/* SLOW MODE DIALOG */
+.slow-dialog{width:100%;max-width:360px;background:rgba(0,10,26,.98);border:2px solid rgba(234,179,8,.35);border-radius:16px;padding:20px;text-align:center}
+.slow-dialog h3{font-size:15px;font-weight:900;color:#eab308;margin-bottom:8px}
+.slow-dialog p{font-size:11px;opacity:.5;margin-bottom:18px;line-height:1.5}
+.slow-dialog-btns{display:flex;flex-direction:column;gap:10px}
+.slow-btn-normal{padding:14px;border-radius:11px;border:2px solid rgba(0,212,255,.3);background:rgba(0,212,255,.1);color:#00d4ff;font-size:13px;font-weight:900;cursor:pointer}
+.slow-btn-slow{padding:14px;border-radius:11px;border:2px solid rgba(234,179,8,.4);background:rgba(234,179,8,.1);color:#eab308;font-size:13px;font-weight:900;cursor:pointer}
+.slow-btn-cancel{padding:10px;border-radius:11px;border:1px solid rgba(255,0,128,.2);background:rgba(255,0,128,.07);color:#ff6eb4;font-size:12px;font-weight:800;cursor:pointer}
+
+/* PANELS */
+.panel{display:none;position:fixed;inset:0;background:#07070f;z-index:200;flex-direction:column}
+.panel.open{display:flex}
+.ph{display:flex;align-items:center;gap:9px;padding:13px 14px;border-bottom:2px solid rgba(0,212,255,.22);background:rgba(0,8,22,.98);flex-shrink:0}
+.ph-title{flex:1;font-size:14px;font-weight:900;color:#00d4ff;overflow:hidden;text-overflow:ellipsis}
+.btn-x{width:38px;height:38px;border-radius:50%;background:rgba(255,0,128,.13);border:2px solid rgba(255,0,128,.32);color:#ff6eb4;font-size:16px;cursor:pointer;font-weight:900}
+
+/* CELLS GRID */
+.grid-toolbar{display:flex;gap:7px;padding:9px 10px 0;flex-shrink:0;flex-wrap:wrap;align-items:center}
+.grid-status{font-size:10px;color:#00d4ff;opacity:.55;flex:1;white-space:nowrap;overflow:hidden}
+.grid-area{flex:1;overflow-y:auto;padding:10px 8px 8px;-webkit-overflow-scrolling:touch}
+.grid-row{display:flex;flex-wrap:wrap;gap:2px;margin-bottom:2px}
+.cell{border-radius:5px;background:#131322;border:1px solid rgba(255,255,255,.06);cursor:pointer;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none;transition:background .12s,border-color .12s;padding:2px}
+.cell:active{opacity:.6}
+.cell-time{font-size:7px;color:rgba(255,255,255,.28);font-weight:700;text-align:center;line-height:1.2}
+.cell-info{font-size:6px;color:rgba(255,255,255,.18);text-align:center;overflow:hidden;white-space:nowrap;width:100%}
+.cell.orange{background:#7c3a00;border-color:#fb923c}
+.cell.orange .cell-time{color:rgba(255,180,80,.8)}
+.cell.yellow{background:#3d2e00;border-color:#854d0e}
+.cell.yellow .cell-time{color:rgba(200,160,40,.6)}
+.cell.playing{background:#003d22;border-color:#10b981}
+.cell.recording{background:#3d0000;border-color:#ff0040;animation:recpulse .8s infinite}
+@keyframes recpulse{0%,100%{border-color:#ff0040}50%{border-color:#ff6060}}
+
+/* RECORDING PANEL */
+.rec-ph{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:2px solid rgba(255,0,64,.35);background:rgba(20,0,0,.98);flex-shrink:0}
+.rec-title{flex:1;font-size:13px;font-weight:900;color:#ff6eb4;overflow:hidden;text-overflow:ellipsis}
+.rec-timer-box{display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(255,0,64,.07);border-bottom:1px solid rgba(255,0,64,.2);flex-shrink:0}
+.rec-timer{font-size:44px;font-weight:900;color:#ff6eb4;font-variant-numeric:tabular-nums;flex:1;text-align:center}
+.rec-prog-wrap{height:4px;background:rgba(255,0,64,.12);flex-shrink:0}
+.rec-prog{height:100%;background:linear-gradient(90deg,#ff0040,#ff6eb4);width:0%;transition:width .1s linear}
+.rec-body{flex:1;overflow-y:auto;padding:12px 14px;-webkit-overflow-scrolling:touch}
+.rec-section{font-size:9px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;opacity:.5;margin:10px 0 7px}
+.rec-section.cyan{color:#00d4ff}
+.rec-section.purple{color:#a78bfa}
+.rec-section.amber{color:#fb923c}
+.rec-row{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+.rec-lbl{font-size:10px;font-weight:900;opacity:.6;min-width:60px;text-align:right}
+.rec-lbl.cyan{color:#00d4ff}
+.rec-lbl.purple{color:#a78bfa}
+.rec-slider{flex:1;height:32px;-webkit-appearance:none;appearance:none;background:rgba(0,212,255,.09);border-radius:16px;outline:none;border:1px solid rgba(0,212,255,.18);cursor:pointer}
+.rec-slider::-webkit-slider-thumb{-webkit-appearance:none;width:32px;height:32px;background:#00d4ff;border-radius:50%;cursor:pointer;box-shadow:0 0 9px rgba(0,212,255,.55)}
+.rec-slider.purple{background:rgba(139,92,246,.09);border-color:rgba(139,92,246,.2)}
+.rec-slider.purple::-webkit-slider-thumb{background:#a78bfa;box-shadow:0 0 9px rgba(139,92,246,.55)}
+.rec-val{font-size:14px;font-weight:900;min-width:28px;text-align:right}
+.rec-val.cyan{color:#00d4ff}
+.rec-val.purple{color:#a78bfa}
+.fire-btn{width:100%;padding:12px;border-radius:11px;border:2px solid rgba(251,146,60,.28);background:rgba(251,146,60,.09);color:#fb923c;font-size:12px;font-weight:900;cursor:pointer;text-transform:uppercase;letter-spacing:1px;margin-bottom:9px}
+.fire-btn.on{background:rgba(251,146,60,.26);border-color:#fb923c;box-shadow:0 0 14px rgba(251,146,60,.28)}
+.rec-ind{display:flex;align-items:center;justify-content:center;gap:8px;font-size:11px;font-weight:900;padding:10px;background:rgba(255,0,64,.1);border-radius:10px;border:1px solid rgba(255,0,64,.3);color:#ff6eb4;margin-bottom:10px}
+.rec-dot{width:8px;height:8px;border-radius:50%;background:#ff0040;animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
+.rec-slow-badge{font-size:10px;font-weight:900;color:#eab308;background:rgba(234,179,8,.12);border:1px solid rgba(234,179,8,.3);border-radius:8px;padding:4px 10px}
+
+/* TOAST */
+.toast{position:fixed;bottom:86px;left:50%;transform:translateX(-50%);background:rgba(0,10,26,.97);padding:10px 20px;border-radius:20px;font-size:12px;font-weight:800;opacity:0;transition:.3s;z-index:500;border:2px solid rgba(0,212,255,.28);pointer-events:none;white-space:nowrap}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(-5px)}
+.spinner{width:36px;height:36px;border:3px solid rgba(0,212,255,.2);border-top-color:#00d4ff;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- UPLOAD OVERLAY -->
+<div class="overlay" id="ov-upload">
+  <div style="font-size:52px">🎵</div>
+  <div style="font-size:15px;font-weight:900;color:#00d4ff">Загрузка</div>
+  <div id="ov-filename" style="font-size:10px;opacity:.32"></div>
+  <div class="upload-pct" id="ov-pct">0%</div>
+  <div class="upload-bar"><div class="upload-fill" id="ov-fill"></div></div>
+</div>
+
+<!-- IMPORT OVERLAY -->
+<div class="overlay" id="ov-import">
+  <div class="import-box">
+    <div style="font-size:11px;font-weight:900;color:#00d4ff;margin-bottom:9px;text-transform:uppercase;letter-spacing:2px">📥 Импорт сценария</div>
+    <textarea class="import-ta" id="import-ta" placeholder="Вставьте JSON..."></textarea>
+    <div style="display:flex;gap:7px;margin-top:9px">
+      <button class="btn btn-cyan" style="flex:1" onclick="confirmImport()">✅ Импорт</button>
+      <button class="btn btn-red"  style="flex:1" onclick="closeImport()">✕ Отмена</button>
+    </div>
+  </div>
+</div>
+
+<!-- SLOW PROGRESS OVERLAY -->
+<div class="overlay" id="ov-slow">
+  <div class="spinner"></div>
+  <div style="font-size:14px;font-weight:900;color:#00d4ff">Создаём замедленную версию...</div>
+  <div style="font-size:11px;opacity:.4">Это займёт несколько секунд</div>
+</div>
+
+<!-- SLOW MODE DIALOG -->
+<div class="overlay" id="ov-slowdialog">
+  <div class="slow-dialog">
+    <h3>🎬 Режим записи</h3>
+    <p>Выберите режим записи для этой клетки.<br>В режиме 0.25× музыка воспроизводится медленно — легче расставить эффекты точно.</p>
+    <div class="slow-dialog-btns">
+      <button class="slow-btn-normal" onclick="startRecordingMode(false)">▶ Обычная скорость (1×)</button>
+      <button class="slow-btn-slow"   onclick="startRecordingMode(true)">🐢 Замедленно (0.25×)</button>
+      <button class="slow-btn-cancel" onclick="cancelRecordingDialog()">✕ Отмена</button>
+    </div>
+  </div>
+</div>
+
+<!-- COUNTDOWN OVERLAY -->
+<div class="overlay" id="ov-countdown">
+  <div class="countdown-num" id="countdown-num">3</div>
+  <div class="countdown-label">Приготовьтесь...</div>
+</div>
+
+<!-- CELLS GRID PANEL -->
+<div class="panel" id="panel-grid">
+  <div class="ph">
+    <div class="ph-title" id="grid-title">Редактор</div>
+    <button class="btn-x" onclick="closeGrid()">✕</button>
+  </div>
+  <div class="grid-toolbar">
+    <button class="btn btn-green"  id="grid-play-btn" onclick="gridTogglePlay()">▶ Тест</button>
+    <button class="btn btn-cyan"   onclick="gridSave()">💾 Сохранить</button>
+    <button class="btn btn-orange" onclick="gridExport()">📤 Экспорт</button>
+    <div class="grid-status" id="grid-status"></div>
+  </div>
+  <div class="grid-area" id="grid-area"></div>
+</div>
+
+<!-- RECORDING PANEL -->
+<div class="panel" id="panel-rec">
+  <div class="rec-ph">
+    <div class="rec-title" id="rec-title">Запись</div>
+    <div class="rec-slow-badge" id="rec-slow-badge" style="display:none">0.25×</div>
+    <button class="btn-x" onclick="recCancel()">✕</button>
+  </div>
+  <div class="rec-timer-box">
+    <div class="rec-timer" id="rec-timer">20.0</div>
+    <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+      <div style="font-size:10px;opacity:.45;color:#ff6eb4" id="rec-seg-lbl">Клетка 1</div>
+      <div style="font-size:10px;opacity:.45;color:#ff6eb4" id="rec-total-lbl">0:00 / 0:00</div>
+    </div>
+  </div>
+  <div class="rec-prog-wrap"><div class="rec-prog" id="rec-prog"></div></div>
+  <div class="rec-body">
+    <div class="rec-ind" id="rec-ind"><div class="rec-dot"></div><span id="rec-ind-text">ЗАПИСЬ</span></div>
+
+    <div class="rec-section cyan">💧 Насосы</div>
+    <div class="rec-row"><div class="rec-lbl cyan">Насос 1</div><input type="range" class="rec-slider" min="0" max="100" step="5" value="0" id="rp1" oninput="recSlider('p1',this.value)"><div class="rec-val cyan" id="rpv1">0</div></div>
+    <div class="rec-row"><div class="rec-lbl cyan">Насос 2</div><input type="range" class="rec-slider" min="0" max="100" step="5" value="0" id="rp2" oninput="recSlider('p2',this.value)"><div class="rec-val cyan" id="rpv2">0</div></div>
+    <div class="rec-row"><div class="rec-lbl cyan">Насос 3</div><input type="range" class="rec-slider" min="0" max="100" step="5" value="0" id="rp3" oninput="recSlider('p3',this.value)"><div class="rec-val cyan" id="rpv3">0</div></div>
+    <div class="rec-row"><div class="rec-lbl cyan">Насос 4</div><input type="range" class="rec-slider" min="0" max="100" step="5" value="0" id="rp4" oninput="recSlider('p4',this.value)"><div class="rec-val cyan" id="rpv4">0</div></div>
+    <div class="rec-row"><div class="rec-lbl cyan">Насос 5</div><input type="range" class="rec-slider" min="0" max="100" step="5" value="0" id="rp5" oninput="recSlider('p5',this.value)"><div class="rec-val cyan" id="rpv5">0</div></div>
+    <div class="rec-row"><div class="rec-lbl cyan">Насос 6</div><input type="range" class="rec-slider" min="0" max="100" step="5" value="0" id="rp6" oninput="recSlider('p6',this.value)"><div class="rec-val cyan" id="rpv6">0</div></div>
+
+    <div class="rec-section cyan">💡 Свет</div>
+    <div class="rec-row">
+      <div class="rec-lbl cyan">LED</div>
+      <button class="fire-btn" id="rec-led-btn" onclick="recToggleLed()" style="border-color:rgba(0,212,255,.3);color:#00d4ff;background:rgba(0,212,255,.07)">💡 LED ВЫКЛ</button>
+    </div>
+
+    <div class="rec-section purple">🔧 Серво</div>
+    <button class="fire-btn" id="rec-fire-btn" onclick="recToggleFire()">🔥 Огонь ВЫКЛ</button>
+    <div class="rec-row"><div class="rec-lbl purple">Серво 5</div><input type="range" class="rec-slider purple" min="0" max="100" step="5" value="50" id="rs5" oninput="recSlider('servo5',this.value)"><div class="rec-val purple" id="rpvs5">50</div></div>
+    <div class="rec-row"><div class="rec-lbl purple">Серво 6</div><input type="range" class="rec-slider purple" min="0" max="100" step="5" value="50" id="rs6" oninput="recSlider('servo6',this.value)"><div class="rec-val purple" id="rpvs6">50</div></div>
+  </div>
+</div>
+
+<!-- HOME -->
+<div class="page" id="page-home">
+  <div class="hero"><h1>💧 ФОНТАН</h1><p>Музыкальное светомузыкальное шоу</p></div>
+  <div class="start-wrap">
+    <div class="hint" id="hint-notready">Загрузите песни и запишите сценарии</div>
+    <button class="btn-start" id="btn-start" onclick="toggleShow()">СТАРТ</button>
+    <div id="show-status">Готов к запуску</div>
+  </div>
+</div>
+
+<!-- UPLOAD -->
+<div class="page" id="page-upload">
+  <div class="card">
+    <div class="ctitle">🎙 Приветствие</div>
+    <div class="upload-zone"><div style="font-size:30px;margin-bottom:4px">⬆️</div><div style="font-size:12px;font-weight:800;color:#00d4ff">MP3</div><input type="file" accept=".mp3" onchange="uploadFile(this,'greeting')"></div>
+    <div id="list-greeting"></div>
+  </div>
+  <div class="card">
+    <div class="ctitle">🎵 Песни <span id="songs-count" style="opacity:.38">(0/15)</span></div>
+    <div class="upload-zone"><div style="font-size:30px;margin-bottom:4px">⬆️</div><div style="font-size:12px;font-weight:800;color:#00d4ff">MP3</div><input type="file" accept=".mp3" onchange="uploadFile(this,'song')"></div>
+    <div id="list-songs"></div>
+  </div>
+  <div class="card">
+    <div class="ctitle">🎤 Прощание</div>
+    <div class="upload-zone"><div style="font-size:30px;margin-bottom:4px">⬆️</div><div style="font-size:12px;font-weight:800;color:#00d4ff">MP3</div><input type="file" accept=".mp3" onchange="uploadFile(this,'farewell')"></div>
+    <div id="list-farewell"></div>
+  </div>
+</div>
+
+<!-- REMOTE -->
+<div class="page" id="page-remote">
+  <div class="card" style="margin-bottom:10px">
+    <div class="ctitle">🎚 Мастер мощность фонтана</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <input type="range" id="master-slider-remote" min="0" max="100" step="5" value="100"
+             style="flex:1;height:32px;-webkit-appearance:none;appearance:none;background:rgba(0,212,255,.09);border-radius:16px;border:1px solid rgba(0,212,255,.18);outline:none;cursor:pointer"
+             oninput="setMaster(this.value)">
+      <div id="master-val-remote" style="font-size:14px;font-weight:900;color:#00d4ff;min-width:40px;text-align:right">100%</div>
+    </div>
+  </div>
+  <div id="list-remote" style="padding:0 2px"></div>
+</div>
+
+<nav>
+  <button class="nb active" data-page="home">🏠<br>Главная</button>
+  <button class="nb" data-page="upload">📂<br>Загрузки</button>
+  <button class="nb" data-page="remote">🎛️<br>Пульт</button>
+</nav>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════════════
+// CONSTANTS & STATE
+// ═══════════════════════════════════════════════════════════════════
+const SEG_DUR    = 20;     // секунд на клетку
+const SLOW_SPEED = 0.25;   // коэффициент замедления
+
+let showRunning     = false;
+let allHaveScenario = false;
+let importTarget    = null;
+
+// ── Grid state ──
+let gdFilename  = null;
+let gdDuration  = 0;
+let gdSegCount  = 0;
+let gdCells     = [];
+let gdPlaying   = false;
+let gdPlayTimer = null;
+let gdPlayStart = null;
+
+// ── Recording state ──
+let recFilename   = null;
+let recSegIdx     = null;
+let recSegDur     = 0;
+let recIsSlow     = false;
+let recTimer      = null;
+let recStart      = null;
+let recWallDur    = 0;
+let recState      = defaultState();
+let recEvents     = [];
+let recHasChanges = false;
+let recInherited  = defaultState();
+
+// ── Dialog state ──
+let pendingSegIdx = null;  // клетка ожидающая выбора режима
+
+function defaultState() {
+  return { p1:0, p2:0, p3:0, p4:0, p5:0, p6:0, led:0, fire:false, servo5:50, servo6:50 };
+}
+function cloneState(s) {
+  return { p1:s.p1, p2:s.p2, p3:s.p3, p4:s.p4, p5:s.p5, p6:s.p6,
+           led:s.led, fire:s.fire, servo5:s.servo5, servo6:s.servo6 };
+}
+function statesEqual(a, b) {
+  return a.p1===b.p1 && a.p2===b.p2 && a.p3===b.p3 &&
+         a.p4===b.p4 && a.p5===b.p5 && a.p6===b.p6 &&
+         a.led===b.led && a.fire===b.fire && a.servo5===b.servo5 && a.servo6===b.servo6;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════════════
+function hexToRgb(hex) {
+  return {
+    r: parseInt(hex.slice(1,3),16),
+    g: parseInt(hex.slice(3,5),16),
+    b: parseInt(hex.slice(5,7),16)
+  };
+}
+function rgbToHex(r,g,b) {
+  return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+}
+function fmtTime(sec) {
+  const m = Math.floor(sec/60), s = Math.floor(sec%60);
+  return m + ':' + String(s).padStart(2,'0');
+}
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('on');
+  setTimeout(() => el.classList.remove('on'), 3000);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// NAV
+// ═══════════════════════════════════════════════════════════════════
+function goPage(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b => b.classList.remove('active'));
+
+  const targetPage = document.getElementById('page-' + pageId);
+  if (targetPage) targetPage.classList.add('active');
+
+  const targetBtn = document.querySelector(`.nb[data-page="${pageId}"]`);
+  if (targetBtn) targetBtn.classList.add('active');
+
+  // Watchdog: включаем только на вкладке пульта
+  if (pageId === 'remote') startHeartbeat();
+  else stopHeartbeat();
+
+  loadTracks(); // всегда обновляем — нужен кэш длительностей на всех вкладках
+}
+
+// Вешаем обработчики на все кнопки .nb[data-page] при инициализации
+document.querySelectorAll('.nb[data-page]').forEach(btn => {
+  btn.addEventListener('click', () => goPage(btn.dataset.page));
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// DURATION CACHE — заполняется при loadTracks
+// ═══════════════════════════════════════════════════════════════════
+const _durationCache = {};   // filename → duration (сек)
+
+// ═══════════════════════════════════════════════════════════════════
+// TRACKS
+// ═══════════════════════════════════════════════════════════════════
+async function loadTracks() {
+  let d;
+  try {
+    const r = await fetch('/api/tracks');
+    d = await r.json();
+  } catch(e) {
+    _netErr(e);
+    return;
+  }
+  const songs = d.songs || [];
+  allHaveScenario = songs.length > 0 && songs.every(s => s.has_scenario);
+  document.getElementById('btn-start').classList.toggle('ready', allHaveScenario);
+  document.getElementById('hint-notready').style.display = allHaveScenario ? 'none' : 'block';
+
+  // Заполняем кэш длительностей
+  const allItems = [];
+  if (d.greeting) allItems.push(d.greeting);
+  songs.forEach(s => allItems.push(s));
+  if (d.farewell) allItems.push(d.farewell);
+  allItems.forEach(item => {
+    if (item && item.duration) _durationCache[item.name] = item.duration;
+  });
+
+  renderUploadList('greeting', d.greeting);
+  renderUploadList('songs', songs);
+  renderUploadList('farewell', d.farewell);
+  renderRemote(d);
+}
+
+function makeTrackHTML(item, isRemote) {
+  const name  = item.name.replace('greeting_','').replace('farewell_','');
+  const dur   = item.duration ? ` · ${fmtTime(item.duration)}` : '';
+  const badge = item.has_scenario
+    ? '<span class="badge">✓ Сценарий</span>'
+    : '<span class="badge badge-no">⏺ Нет</span>';
+  const remBtns = isRemote ? `
+    <button class="btn btn-purple" onclick="openGrid('${item.name}')">🎼 Редактор</button>
+    <button class="btn btn-orange" onclick="openImport('${item.name}')">📥 Импорт</button>
+    ${item.has_scenario ? `<button class="btn btn-red" onclick="delScenario('${item.name}')">🗑 Сценарий</button>` : ''}
+  ` : '';
+  return `<div class="track-item">
+    <div class="ti-head">
+      <div style="flex:1;min-width:0">
+        <div class="ti-name">${name}</div>
+        <div style="font-size:9px;opacity:.32;margin-top:2px;color:#00d4ff">${item.label||''}${dur}</div>
+      </div>${badge}
+    </div>
+    <div class="ti-btns">
+      <button class="btn btn-red" onclick="delTrack('${item.name}')">🗑 Удалить</button>
+      ${remBtns}
+    </div>
+  </div>`;
+}
+
+function renderUploadList(type, data) {
+  if (type === 'songs') {
+    document.getElementById('songs-count').textContent = `(${(data||[]).length}/15)`;
+    document.getElementById('list-songs').innerHTML = (data||[]).map(x=>makeTrackHTML(x,false)).join('');
+  } else {
+    document.getElementById('list-'+type).innerHTML = data ? makeTrackHTML(data,false) : '';
+  }
+}
+
+function renderRemote(d) {
+  const el  = document.getElementById('list-remote');
+  const all = [];
+  if (d.greeting) all.push({...d.greeting, label:'🎙 ПРИВЕТСТВИЕ'});
+  (d.songs||[]).forEach(s => all.push(s));
+  if (d.farewell) all.push({...d.farewell, label:'🎤 ПРОЩАНИЕ'});
+  if (!all.length) {
+    el.innerHTML = '<div style="text-align:center;padding:52px;opacity:.25;color:#00d4ff">Загрузите музыку</div>';
+    return;
+  }
+  el.innerHTML = all.map(t => makeTrackHTML(t, true)).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// UPLOAD / DELETE / IMPORT
+// ═══════════════════════════════════════════════════════════════════
+async function uploadFile(input, type) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('ov-filename').textContent = file.name;
+  document.getElementById('ov-pct').textContent  = '0%';
+  document.getElementById('ov-fill').style.width = '0%';
+  document.getElementById('ov-upload').classList.add('open');
+  // п.2.2: монопольный канал под передачу — блокируем slider-трафик
+  _fileTransferActive = true;
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    await new Promise((res, rej) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/upload/' + type);
+      xhr.upload.onprogress = e => {
+        if (e.lengthComputable) {
+          const p = Math.round(e.loaded/e.total*100);
+          document.getElementById('ov-pct').textContent  = p + '%';
+          document.getElementById('ov-fill').style.width = p + '%';
+        }
+      };
+      xhr.onload  = () => { const d = JSON.parse(xhr.responseText); d.success ? res() : rej(d.error||'Ошибка'); };
+      xhr.onerror = () => rej('Ошибка сети');
+      xhr.send(fd);
+    });
+    toast('✅ Загружено!'); loadTracks();
+  } catch(e) { toast(String(e)); }
+  finally {
+    _fileTransferActive = false;
+    document.getElementById('ov-upload').classList.remove('open');
+    input.value='';
+  }
+}
+
+async function delTrack(f) {
+  if (!confirm('Удалить трек и сценарий?')) return;
+  await fetch('/api/delete/'+f, {method:'DELETE'});
+  toast('Удалено'); loadTracks();
+}
+async function delScenario(f) {
+  if (!confirm('Удалить сценарий?')) return;
+  await fetch('/api/delete_scenario/'+f, {method:'DELETE'});
+  toast('Сценарий удалён'); loadTracks();
+}
+function openImport(f) {
+  importTarget = f;
+  document.getElementById('import-ta').value = '';
+  document.getElementById('ov-import').classList.add('open');
+}
+function closeImport() {
+  document.getElementById('ov-import').classList.remove('open');
+  importTarget = null;
+}
+async function confirmImport() {
+  const text = document.getElementById('import-ta').value.trim();
+  if (!text) { toast('Вставьте JSON'); return; }
+  let sc;
+  try { sc = JSON.parse(text); } catch(e) { toast('❌ Неверный JSON'); return; }
+  if (!Array.isArray(sc)) { toast('❌ Нужен массив'); return; }
+  _fileTransferActive = true;   // п.2.2
+  try {
+    await fetch('/api/save_scenario', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({filename: importTarget, scenario: sc})
+    });
+    toast('✅ Импортировано!'); closeImport(); loadTracks();
+  } finally {
+    _fileTransferActive = false;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// GRID — OPEN / CLOSE
+// ═══════════════════════════════════════════════════════════════════
+async function openGrid(filename) {
+  gdStopPlay();
+  gdFilename = filename;
+  const name = filename.replace('greeting_','').replace('farewell_','');
+  document.getElementById('grid-title').textContent = name.length > 22 ? name.slice(0,19)+'...' : name;
+
+  // Длительность: сначала из кэша (заполнен при loadTracks), затем API
+  if (_durationCache[filename]) {
+    gdDuration = _durationCache[filename];
+  } else {
+    try {
+      const r = await fetch('/api/duration/'+filename);
+      const d = await r.json();
+      gdDuration = d.duration || 180;
+      _durationCache[filename] = gdDuration;
+    } catch(e) { gdDuration = 180; }
+  }
+
+  gdSegCount = Math.ceil(gdDuration / SEG_DUR);
+  gdCells    = new Array(gdSegCount).fill(null);
+
+  // Загрузить существующий сценарий
+  try {
+    const r  = await fetch('/api/scenario/'+filename);
+    const sc = await r.json();
+    if (Array.isArray(sc) && sc.length && sc[0] && sc[0].time_ms !== undefined) {
+      // Восстанавливаем состояние клеток из событий
+      // Каждая клетка хранит последнее состояние из её диапазона
+      const cellStates = new Array(gdSegCount).fill(null);
+      sc.forEach(ev => {
+        const segIdx = Math.floor(ev.time_ms / (SEG_DUR * 1000));
+        if (segIdx >= 0 && segIdx < gdSegCount) {
+          if (!cellStates[segIdx]) cellStates[segIdx] = defaultState();
+          Object.assign(cellStates[segIdx], ev.state);
+        }
+      });
+      for (let i = 0; i < gdSegCount; i++) {
+        if (cellStates[i]) gdCells[i] = cellStates[i];
+      }
+    }
+  } catch(e) {}
+
+  buildGrid();
+  document.getElementById('panel-grid').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeGrid() {
+  gdStopPlay();
+  fetch('/api/all_off');
+  document.getElementById('panel-grid').classList.remove('open');
+  document.body.style.overflow = '';
+  gdFilename = null;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// GRID — BUILD
+// ═══════════════════════════════════════════════════════════════════
+function segDuration(idx) {
+  if (idx === gdSegCount - 1) {
+    const rem = gdDuration - idx * SEG_DUR;
+    return rem > 0 ? rem : SEG_DUR;
+  }
+  return SEG_DUR;
+}
+
+function buildGrid() {
+  const area = document.getElementById('grid-area');
+  area.innerHTML = '';
+
+  const W        = area.clientWidth || (window.innerWidth - 20);
+  const cellSize = Math.max(52, Math.min(80, Math.floor((W - 8) / 5)));
+  const perRow   = Math.max(3, Math.floor((W - 4) / (cellSize + 2)));
+
+  const rows = [];
+  for (let s = 0; s < gdSegCount; s += perRow)
+    rows.push({start: s, end: Math.min(s + perRow, gdSegCount)});
+
+  rows.forEach((seg, rIdx) => {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'grid-row';
+    const indices = [];
+    for (let ci = seg.start; ci < seg.end; ci++) indices.push(ci);
+    if (rIdx % 2 === 1) indices.reverse();
+    indices.forEach(i => {
+      const startSec = i * SEG_DUR;
+      const durSec   = segDuration(i);
+      const el = document.createElement('div');
+      el.className  = 'cell';
+      el.id         = 'cell-'+i;
+      el.style.width  = cellSize + 'px';
+      el.style.height = cellSize + 'px';
+      el.innerHTML = `
+        <div class="cell-time">${fmtTime(startSec)}</div>
+        <div class="cell-info">${durSec < SEG_DUR ? durSec.toFixed(1)+'с' : SEG_DUR+'с'}</div>`;
+      el.addEventListener('click', () => onCellClick(i));
+      rowEl.appendChild(el);
+    });
+    area.appendChild(rowEl);
+  });
+
+  refreshAllCells();
+  // п.3.4: шаг маркеров зависит от режима скорости
+  const _gridStep = recIsSlow ? 0.4 : 0.1;  // сек между маркерами
+  document.getElementById('grid-status').textContent =
+    `${gdSegCount} кл · ${fmtTime(gdDuration)} · ${SEG_DUR}с/кл`;
+}
+
+function refreshAllCells() {
+  let foundFirst = false;
+  for (let ci = 0; ci < gdSegCount; ci++) {
+    const el = document.getElementById('cell-'+ci);
+    if (!el) continue;
+    el.classList.remove('orange','yellow','playing');
+    if (gdCells[ci] !== null) {
+      el.classList.add('orange');
+      foundFirst = true;
+    } else if (foundFirst) {
+      el.classList.add('yellow');
+    }
+  }
+}
+
+function onCellClick(idx) {
+  if (gdPlaying) return;
+  if (gdCells[idx] !== null) {
+    if (!confirm('Эта клетка уже записана. Перезаписать?')) return;
+    gdCells[idx] = null;
+    refreshAllCells();
+  }
+  // Показать диалог выбора режима
+  pendingSegIdx = idx;
+  document.getElementById('ov-slowdialog').classList.add('open');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SLOW MODE DIALOG
+// ═══════════════════════════════════════════════════════════════════
+function cancelRecordingDialog() {
+  document.getElementById('ov-slowdialog').classList.remove('open');
+  pendingSegIdx = null;
+}
+
+async function startRecordingMode(isSlow) {
+  document.getElementById('ov-slowdialog').classList.remove('open');
+  if (pendingSegIdx === null) return;
+  const idx = pendingSegIdx;
+  pendingSegIdx = null;
+  await openRecording(idx, isSlow);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// GRID — SAVE / EXPORT / TEST
+// ═══════════════════════════════════════════════════════════════════
+function buildScenario() {
+  const sc = [];
+  let curState = defaultState();
+  for (let ci = 0; ci < gdSegCount; ci++) {
+    if (gdCells[ci] !== null) {
+      // Если в клетке есть детальные события — добавляем их
+      if (gdCells[ci]._events && gdCells[ci]._events.length > 0) {
+        gdCells[ci]._events.forEach(ev => {
+          sc.push({ time_ms: ev.time_ms, state: cloneState(ev.state) });
+        });
+      } else {
+        // Иначе одно событие на начало клетки
+        Object.assign(curState, gdCells[ci]);
+        const stateToSave = cloneState(curState);
+        delete stateToSave._events;
+        sc.push({
+          time_ms: ci * SEG_DUR * 1000,
+          state:   stateToSave
+        });
+      }
+      Object.assign(curState, gdCells[ci]);
+    }
+  }
+  // Сортируем по времени
+  sc.sort((a,b) => a.time_ms - b.time_ms);
+  return sc;
+}
+
+async function gridSave() {
+  if (!gdFilename) return;
+  const sc = buildScenario();
+  _fileTransferActive = true;   // п.2.2: блокируем slider-трафик на время сохранения
+  try {
+    await fetch('/api/save_scenario', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({filename: gdFilename, scenario: sc})
+    });
+    toast('✅ Сохранено!'); loadTracks();
+  } finally {
+    _fileTransferActive = false;
+  }
+}
+
+async function gridExport() {
+  const sc   = buildScenario();
+  const blob = new Blob([JSON.stringify(sc,null,2)], {type:'application/json'});
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = (gdFilename||'scenario').replace('.mp3','.json');
+  a.click();
+  toast('📤 Экспортировано');
+}
+
+function gridTogglePlay() {
+  gdPlaying ? gdStopPlay() : gdStartPlay();
+}
+
+function gdStartPlay() {
+  if (!gdFilename) return;
+  gdPlaying   = true;
+  gdPlayStart = Date.now();
+
+  const btn = document.getElementById('grid-play-btn');
+  btn.textContent = '⏹ Стоп';
+  btn.classList.replace('btn-green','btn-red');
+
+  fetch('/api/play/'+gdFilename);
+
+  const sc     = buildScenario();
+  let scIdx    = 0;
+  let lastHlIdx = -1;
+
+  gdPlayTimer = setInterval(() => {
+    if (!gdPlaying) return;
+    const elapsed_ms = Date.now() - gdPlayStart;
+    const curSegIdx  = Math.floor(elapsed_ms / (SEG_DUR * 1000));
+
+    if (curSegIdx !== lastHlIdx) {
+      if (lastHlIdx >= 0) {
+        const prev = document.getElementById('cell-'+lastHlIdx);
+        if (prev) {
+          prev.classList.remove('playing');
+          if (gdCells[lastHlIdx]) prev.classList.add('orange');
+          else {
+            let anyBefore = false;
+            for (let bi = 0; bi < lastHlIdx; bi++) { if (gdCells[bi]) { anyBefore=true; break; } }
+            if (anyBefore) prev.classList.add('yellow');
+          }
+        }
+      }
+      const cur = document.getElementById('cell-'+curSegIdx);
+      if (cur) { cur.classList.remove('orange','yellow'); cur.classList.add('playing'); }
+      lastHlIdx = curSegIdx;
+    }
+
+    while (scIdx < sc.length && sc[scIdx].time_ms <= elapsed_ms) {
+      // При тестовом воспроизведении пишем напрямую без задержки throttle
+      _pendingState = Object.assign(_pendingState || {}, sc[scIdx].state);
+      if (_throttleTimer) { clearTimeout(_throttleTimer); _throttleTimer = null; }
+      _flushState();
+      scIdx++;
+    }
+
+    if (elapsed_ms >= gdDuration * 1000) gdStopPlay();
+  }, 50);
+}
+
+function gdStopPlay() {
+  if (gdPlayTimer) { clearInterval(gdPlayTimer); gdPlayTimer = null; }
+  gdPlaying = false;
+  const btn = document.getElementById('grid-play-btn');
+  if (btn) { btn.textContent='▶ Тест'; btn.classList.replace('btn-red','btn-green'); }
+  document.querySelectorAll('.cell.playing').forEach(el => {
+    el.classList.remove('playing');
+    const ci = parseInt(el.id.replace('cell-',''));
+    if (!isNaN(ci)) {
+      if (gdCells[ci]) { el.classList.add('orange'); }
+      else {
+        let anyBefore = false;
+        for (let bi = 0; bi < ci; bi++) { if (gdCells[bi]) { anyBefore=true; break; } }
+        if (anyBefore) el.classList.add('yellow');
+      }
+    }
+  });
+  fetch('/api/stop_music');
+  fetch('/api/all_off');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RECORDING — OPEN
+// ═══════════════════════════════════════════════════════════════════
+async function openRecording(segIdx, isSlow) {
+  recFilename   = gdFilename;
+  recSegIdx     = segIdx;
+  recIsSlow     = isSlow;
+  recHasChanges = false;
+  recEvents     = [];
+
+  // Унаследованное состояние
+  recInherited = defaultState();
+  for (let ci = 0; ci < segIdx; ci++) {
+    if (gdCells[ci]) {
+      const s = gdCells[ci];
+      const clean = cloneState(s);
+      Object.assign(recInherited, clean);
+    }
+  }
+  recState = cloneState(recInherited);
+
+  const durOrig = segDuration(segIdx);
+  recSegDur  = durOrig;
+  recWallDur = isSlow ? durOrig / SLOW_SPEED : durOrig;
+
+  // Заголовок
+  const name = recFilename.replace('greeting_','').replace('farewell_','');
+  document.getElementById('rec-title').textContent = name.length > 18 ? name.slice(0,15)+'...' : name;
+  const slowBadge = document.getElementById('rec-slow-badge');
+  slowBadge.style.display = isSlow ? 'block' : 'none';
+  document.getElementById('rec-ind-text').textContent = isSlow ? 'ЗАПИСЬ (0.25×)' : 'ЗАПИСЬ';
+  document.getElementById('rec-seg-lbl').textContent = `Клетка ${segIdx+1} / ${gdSegCount}`;
+  document.getElementById('rec-total-lbl').textContent = `${fmtTime(segIdx*SEG_DUR)} / ${fmtTime(gdDuration)}`;
+
+  // Загрузить ползунки
+  loadRecSliders(recState);
+
+  // Если замедление — создать замедленный файл
+  if (isSlow) {
+    document.getElementById('ov-slow').classList.add('open');
+    try {
+      const r = await fetch(`/api/make_slow/${recFilename}/${SLOW_SPEED}`);
+      const d = await r.json();
+      if (!d.success) {
+        toast('Ошибка: '+d.error);
+        document.getElementById('ov-slow').classList.remove('open');
+        return;
+      }
+    } catch(e) {
+      toast('Ошибка ffmpeg');
+      document.getElementById('ov-slow').classList.remove('open');
+      return;
+    }
+    document.getElementById('ov-slow').classList.remove('open');
+  }
+
+  document.getElementById('panel-rec').classList.add('open');
+
+  // ── ОБРАТНЫЙ ОТСЧЁТ 3-2-1 ──
+  await doCountdown();
+
+  // После отсчёта — запускаем воспроизведение через бэкенд
+  const offsetSec = segIdx * SEG_DUR;
+  await _apiFetch('/api/record/start', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      filename:   recFilename,
+      offset_sec: isSlow ? offsetSec / SLOW_SPEED : offsetSec,
+      slow:       isSlow
+    })
+  });
+
+  // Запускаем таймер записи
+  recStart = Date.now();
+  startRecTimer();
+}
+
+// ── ОБРАТНЫЙ ОТСЧЁТ ──
+function doCountdown() {
+  return new Promise(resolve => {
+    const ov  = document.getElementById('ov-countdown');
+    const num = document.getElementById('countdown-num');
+    ov.classList.add('open');
+    let cnt = 3;
+    num.textContent = cnt;
+    const iv = setInterval(() => {
+      cnt--;
+      if (cnt <= 0) {
+        clearInterval(iv);
+        ov.classList.remove('open');
+        resolve();
+      } else {
+        num.textContent = cnt;
+      }
+    }, 1000);
+  });
+}
+
+function startRecTimer() {
+  if (recTimer) { clearInterval(recTimer); recTimer = null; }
+  recTimer = setInterval(() => {
+    if (!recStart) return;
+    const wallElapsed = (Date.now() - recStart) / 1000;
+    const wallRem     = Math.max(0, recWallDur - wallElapsed);
+    const origRem = recIsSlow ? wallRem * SLOW_SPEED : wallRem;
+    document.getElementById('rec-timer').textContent = origRem.toFixed(1);
+    document.getElementById('rec-prog').style.width  =
+      ((recWallDur - wallRem) / recWallDur * 100) + '%';
+    if (wallElapsed >= recWallDur) {
+      recFinish();
+    }
+  }, 50);
+}
+
+function loadRecSliders(state) {
+  for (let n = 1; n <= 6; n++) {
+    const el = document.getElementById('rp'+n);
+    if (el) { el.value = state['p'+n]; document.getElementById('rpv'+n).textContent = state['p'+n]; }
+  }
+  // LED — toggle кнопка
+  const ledBtn = document.getElementById('rec-led-btn');
+  if (ledBtn) {
+    ledBtn.textContent = state.led > 0 ? '💡 LED ВКЛ' : '💡 LED ВЫКЛ';
+    ledBtn.style.background = state.led > 0 ? 'rgba(0,212,255,.22)' : 'rgba(0,212,255,.07)';
+  }
+  const s5 = document.getElementById('rs5');
+  if (s5)  { s5.value  = state.servo5;  document.getElementById('rpvs5').textContent  = state.servo5; }
+  const s6 = document.getElementById('rs6');
+  if (s6)  { s6.value  = state.servo6;  document.getElementById('rpvs6').textContent  = state.servo6; }
+  const fb = document.getElementById('rec-fire-btn');
+  if (fb) { fb.textContent = state.fire ? '🔥 Огонь ВКЛ' : '🔥 Огонь ВЫКЛ'; fb.classList.toggle('on', state.fire); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RECORDING — SLIDERS
+// ИСПРАВЛЕНИЕ: при записи НЕ отправляем команды физическим устройствам.
+// Только запоминаем состояние и события.
+// Физическое воспроизведение происходит только при ТЕСТЕ и ШОУУ.
+// ═══════════════════════════════════════════════════════════════════
+function recSlider(key, val) {
+  const numVal = Number(val);
+  recState[key] = numVal;
+  // Обновить отображение значения
+  if (key.startsWith('p')) {
+    document.getElementById('rpv'+key.slice(1)).textContent = val;
+  } else if (key === 'led') { /* led теперь toggle */
+  } else if (key === 'servo5') {
+    document.getElementById('rpvs5').textContent = val;
+  } else if (key === 'servo6') {
+    document.getElementById('rpvs6').textContent = val;
+  }
+  // Записать событие в сценарий
+  recordEvent();
+  // Отправить на железо через throttled batch (раздел 2.1 ТЗ)
+  // Пакуем только текущий канал — throttler объединит со следующими за 47мс
+  sendStateHTTP({ [key]: numVal });
+}
+
+function recToggleFire() {
+  recState.fire = !recState.fire;
+  const btn = document.getElementById('rec-fire-btn');
+  btn.textContent = recState.fire ? '🔥 Огонь ВКЛ' : '🔥 Огонь ВЫКЛ';
+  btn.classList.toggle('on', recState.fire);
+  recordEvent();
+  // Огонь — прямая команда, без throttle (мгновенный отклик важен)
+  _apiFetch('/api/set_fire/' + (recState.fire ? 1 : 0));
+}
+
+
+
+
+
+function recordEvent() {
+  if (!recStart) return;
+  const wallElapsed = (Date.now() - recStart) / 1000;
+  const origElapsed = recIsSlow ? wallElapsed * SLOW_SPEED : wallElapsed;
+  const timeMsFromSong = (recSegIdx * SEG_DUR + origElapsed) * 1000;
+  recEvents.push({
+    time_ms: Math.round(timeMsFromSong),
+    state:   cloneState(recState)
+  });
+  recHasChanges = !statesEqual(recState, recInherited);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RECORDING — FINISH / CANCEL
+// ═══════════════════════════════════════════════════════════════════
+function recFinish() {
+  if (recTimer) { clearInterval(recTimer); recTimer = null; }
+  recStart = null;
+  _apiFetch('/api/record/stop');  // точная остановка музыки по кнопке
+
+  if (recHasChanges && recEvents.length > 0) {
+    gdCells[recSegIdx] = cloneState(recState);
+    gdCells[recSegIdx]._events = recEvents.map(ev => ({
+      time_ms: ev.time_ms,
+      state:   cloneState(ev.state)
+    }));
+  }
+
+  document.getElementById('panel-rec').classList.remove('open');
+
+  if (recIsSlow) _apiFetch('/api/delete_slow/'+recFilename);
+
+  refreshAllCells();
+  // Не выключаем физически — оставляем всё как есть до следующего действия
+}
+
+function recCancel() {
+  if (recTimer) { clearInterval(recTimer); recTimer = null; }
+  recStart = null;
+  _apiFetch('/api/record/stop');  // точная остановка музыки по отмене
+  if (recIsSlow) _apiFetch('/api/delete_slow/'+recFilename);
+  document.getElementById('panel-rec').classList.remove('open');
+  document.getElementById('ov-countdown').classList.remove('open');
+  recEvents     = [];
+  recHasChanges = false;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SEND STATE HTTP (используется только при ТЕСТЕ)
+// ═══════════════════════════════════════════════════════════════════
+let _lastNetErr = 0;
+function _netErr(e) {
+  // Показываем toast не чаще раза в 4 сек чтобы не спамить
+  const now = Date.now();
+  if (now - _lastNetErr > 4000) {
+    _lastNetErr = now;
+    toast('⚠️ Нет связи с платой: ' + (e && e.message ? e.message : e));
+  }
+}
+
+async function _apiFetch(url, opts) {
+  try {
+    const r = await fetch(url, opts);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r;
+  } catch(e) {
+    _netErr(e);
+    return null;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// THROTTLED BATCH STATE SENDER  (раздел 2.1 ТЗ)
+// Все каналы пакуются в один JSON; отправка ≤ 22 раз/сек.
+// Во время передачи файлов (_fileTransferActive=true) отправка блокируется.
+// ═══════════════════════════════════════════════════════════════════
+let _fileTransferActive = false;   // блокировка во время upload/download (п.2.2)
+let _pendingState       = null;    // накопленное состояние для отправки
+let _throttleTimer      = null;    // таймер дросселирования
+const THROTTLE_MS       = 47;      // ~21 запрос/сек
+
+function _flushState() {
+  _throttleTimer = null;
+  if (_fileTransferActive || !_pendingState) return;
+  const snap = _pendingState;
+  _pendingState = null;
+  _apiFetch('/api/state', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(snap)
+  });
+}
+
+// Вызывается из recSlider / setMaster / recToggleFire / recToggleLed
+// и из gdStartPlay при тестовом воспроизведении.
+function sendStateHTTP(state) {
+  // Объединяем с уже ожидающим пакетом
+  _pendingState = Object.assign(_pendingState || {}, state);
+  if (!_throttleTimer) {
+    _throttleTimer = setTimeout(_flushState, THROTTLE_MS);
+  }
+}
+
+// ── LED toggle (ON/OFF)  п.4.1 ───────────────────────────────────────────────
+function recToggleLed() {
+  recState.led = recState.led > 0 ? 0 : 100;
+  const btn = document.getElementById('rec-led-btn');
+  if (btn) {
+    btn.textContent = recState.led > 0 ? '💡 LED ВКЛ' : '💡 LED ВЫКЛ';
+    btn.style.background = recState.led > 0 ? 'rgba(0,212,255,.22)' : 'rgba(0,212,255,.07)';
+  }
+  recordEvent();
+  // LED — прямая команда
+  _apiFetch('/api/set_led/' + recState.led);
+}
+
+// ── Master slider (только Remote, п.4.1 ТЗ) ─────────────────────────────────
+// Ползунок Мастер присутствует исключительно на странице Пульта.
+// Throttling через sendStateHTTP не требуется — редкие нажатия, прямой fetch.
+function setMaster(val) {
+  const slider = document.getElementById('master-slider-remote');
+  const valEl  = document.getElementById('master-val-remote');
+  if (slider) slider.value      = val;
+  if (valEl)  valEl.textContent = val + '%';
+  _apiFetch('/api/set_master/' + val);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SHOW
+// ═══════════════════════════════════════════════════════════════════
+async function toggleShow() {
+  if (!allHaveScenario) return;
+  if (!showRunning) {
+    const r = await fetch('/api/show/start');
+    const d = await r.json();
+    if (d.success) { showRunning = true; updateShowUI(); }
+    else toast(d.error||'Ошибка');
+  } else {
+    await fetch('/api/show/stop');
+    showRunning = false; updateShowUI();
+  }
+}
+function updateShowUI() {
+  const btn = document.getElementById('btn-start');
+  const st  = document.getElementById('show-status');
+  if (showRunning) {
+    btn.textContent = 'СТОП'; btn.classList.add('running');
+    st.textContent = '● Шоу идёт'; st.style.color = '#10b981';
+  } else {
+    btn.textContent = 'СТАРТ'; btn.classList.remove('running');
+    st.textContent = 'Готов к запуску'; st.style.color = '#00d4ff';
+  }
+}
+setInterval(async () => {
+  try {
+    const d = await (await fetch('/api/show/status')).json();
+    if (showRunning && !d.running) { showRunning = false; updateShowUI(); }
+  } catch(e) {}
+}, 2000);
+
+// ═══════════════════════════════════════════════════════════════════
+// HEARTBEAT — watchdog ping
+// Пока открыт пульт (страница remote) — шлём /api/ping каждые 1.5с.
+// Если плата не получает пинг >5с — она выключает всё (app.py watchdog).
+// При уходе с пульта — деактивируем watchdog через /api/ping/stop.
+// ═══════════════════════════════════════════════════════════════════
+let _pingInterval = null;
+let _pingActive   = false;
+let _pingErrShown = false;
+
+function startHeartbeat() {
+  if (_pingInterval) return;
+  _pingActive   = true;
+  _pingErrShown = false;
+  _pingInterval = setInterval(async () => {
+    if (!_pingActive) return;
+    try {
+      const r = await fetch('/api/ping');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      if (_pingErrShown) {
+        _pingErrShown = false;
+        toast('✅ Связь с платой восстановлена');
+      }
+    } catch(e) {
+      if (!_pingErrShown) {
+        _pingErrShown = true;
+        toast('⚠️ Потеряна связь с платой');
+      }
+    }
+  }, 1500);
+}
+
+function stopHeartbeat() {
+  _pingActive = false;
+  if (_pingInterval) { clearInterval(_pingInterval); _pingInterval = null; }
+  fetch('/api/ping/stop').catch(() => {});
+}
+
+// Страница выгружается — деактивируем watchdog
+window.addEventListener('beforeunload', stopHeartbeat);
+
+// ── Init ──
+// goPage('home') устанавливает активную вкладку и загружает треки
+goPage('home');
+</script>
+</body>
+</html>
